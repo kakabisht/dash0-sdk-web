@@ -198,6 +198,44 @@ describe("init", () => {
     });
   });
 
+  describe("match patterns", () => {
+    it("trims strings and drops empty ones in ignoreUrls and ignoreErrorMessages", async () => {
+      init({
+        ...baseOptions,
+        ignoreUrls: [" /callback ", "", /\/admin\//],
+        ignoreErrorMessages: ["  ", "ResizeObserver loop "],
+      });
+
+      expect(vars.ignoreUrls).toEqual(["/callback", /\/admin\//]);
+      expect(vars.ignoreErrorMessages).toEqual(["ResizeObserver loop"]);
+    });
+
+    it("trims strings and drops empty ones in propagator match lists", async () => {
+      init({
+        ...baseOptions,
+        propagators: [{ type: "xray", match: [" https://api.example.com/ ", "", /\.amazonaws\.com/] }],
+      });
+
+      expect(vars.propagators).toEqual([{ type: "xray", match: ["https://api.example.com/", /\.amazonaws\.com/] }]);
+    });
+
+    it("trims strings and drops empty ones in legacy propagateTraceHeadersCorsURLs", async () => {
+      init({
+        ...baseOptions,
+        propagateTraceHeadersCorsURLs: ["https://api.example.com/ ", " "],
+      });
+
+      expect(vars.propagators).toEqual([{ type: "traceparent", match: ["https://api.example.com/"] }]);
+    });
+
+    it("does not break init on propagators that are not an array", async () => {
+      const propagators = {} as unknown as PropagatorConfig[];
+      init({ ...baseOptions, propagators });
+
+      expect(vars.propagators).toBe(propagators);
+    });
+  });
+
   describe("propagator configuration", () => {
     it("should set propagators configuration when provided", async () => {
       const propagators: PropagatorConfig[] = [
